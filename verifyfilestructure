@@ -1,0 +1,128 @@
+import os
+import xlsxwriter
+import datetime
+import xml.etree.ElementTree as ET
+
+
+#Ask user from where to input URI information
+input2 = input('Enter Directory path: ')
+while os.path.isdir(input2) == False:
+    input2 = input('Directory path not valid, please re-enter: ')
+path = str(input2)
+
+#Ask user where to output XLSX
+input3 = input('Enter XLSX output path: ')
+while os.path.isdir(input3) == False:
+    input3 = input('Directory path not valid, please re-enter: ')
+Outputpath = str(input3)
+
+#Create Excel Filename
+x = datetime.datetime.now()
+timestamp = x.strftime("%Y-%m-%d.%H%M")
+Excelpath = Outputpath + "\VerifyTreeErrorLog" + timestamp + ".xlsx"
+
+#Create a workbook
+workbook = xlsxwriter.Workbook(Excelpath)
+worksheet = workbook.add_worksheet("Missing files")
+worksheet2 = workbook.add_worksheet("Misnamed or extraneous files")
+worksheet3 = workbook.add_worksheet("Metadata discrepancies")
+
+#headers for sheet three
+worksheet3.write(0, 0, "XML file path")
+worksheet3.write(0, 1, "Asset identifier metadata")
+
+
+row = 0
+col = 0
+
+row2 = 0
+col2 = 0
+
+row3 = 1
+col3 = 0
+
+folderlist = []
+filelist = []
+missingfilelist = []
+metadatalist = []
+
+for root, directories, files in os.walk(path, topdown=False):
+    for name in directories:
+        folderlist.append(os.path.join(root, name))
+    for name in files:
+        filelist.append(os.path.join(root, name))
+
+for x in folderlist:
+    base0 = "\\" + x.split("\\") [-1]
+    base = x + base0
+    accessfile = base + "_ACCESS.mp4"
+    accessmd5 = base + "_ACCESS.mp4.md5"
+    masterfile = base + "_MASTER.mov"
+    mastermd5 = base + "_MASTER.mov.md5"
+    mezzfile = base + "_MEZZ.mov"
+    mezzmd5 = base + "_MEZZ.mov.md5"
+    xmlfile = base + ".xml"
+
+    numfiles = len(filelist)
+    i = 0
+    while i < numfiles:
+        print (filelist[i])
+        if base in filelist[i] and ".JPG" in filelist[i]:
+            filelist.remove(filelist[i])
+            numfiles = len(filelist)
+        else:
+            i = i+1
+    if accessfile not in filelist:
+        missingfilelist.append(accessfile)
+    else:
+        filelist.remove(accessfile)
+    if accessmd5 not in filelist:
+        missingfilelist.append(accessmd5)
+    else:
+        filelist.remove(accessmd5)
+    if masterfile not in filelist:
+        missingfilelist.append(masterfile)
+    else:
+        filelist.remove(masterfile)
+    if mastermd5 not in filelist:
+        missingfilelist.append(mastermd5)
+    else:
+        filelist.remove(mastermd5)
+    if mezzfile not in filelist:
+        missingfilelist.append(mezzfile)
+    else:
+        filelist.remove(mezzfile)
+    if mezzmd5 not in filelist:
+        missingfilelist.append(mezzmd5)
+    else:
+        filelist.remove(mezzmd5)
+    if xmlfile not in filelist:
+        missingfilelist.append(xmlfile)
+    else:
+        filelist.remove(xmlfile)
+        Batch = ET.parse(xmlfile)
+        MediaAsset = Batch.getroot()
+        for x in MediaAsset.findall('Original'):
+            if x.find('AssetIdentifier').text != base0:
+                worksheet3.write(row3, 1, x.find('AssetIdentifier').text)
+                worksheet3.write(row3, 0, xmlfile)
+                metadatalist.append(xmlfile)
+                row3 = row3 + 1
+
+if len(missingfilelist) == 0 and len(filelist) ==0 and len(metadatalist) == 0:
+    print("Verifytree passed. No error log to print.")
+else:
+    for x in missingfilelist:
+        worksheet.write(row, col, x)
+        row = row + 1
+
+    for x in filelist:
+        worksheet2.write(row2, col2, x)
+        row2 = row2 + 1
+
+    workbook.close()
+    print("Verifytree failed. See error log.")
+    print(str(len(missingfilelist)) + " missing files")
+    print(str(len(filelist)) + " misnamed or extraneous files")
+    print(str(len(metadatalist)) + " metadata discrepancies")
+    print (Excelpath)
