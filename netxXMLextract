@@ -1,0 +1,255 @@
+import xml.etree.ElementTree as ET
+import os
+import xlsxwriter
+import datetime
+
+#Ask user from where to input information
+input1 = input('Enter input path: ')
+while os.path.isfile(input1) == False:
+    input1 = input('Directory path not valid, please re-enter: ')
+XMLpath = str(input1)
+
+#Ask user where to output excel
+input2 = input('Enter output path: ')
+while os.path.isdir(input2) == False:
+    input2 = input('Directory path not valid, please re-enter: ')
+Outputpath = str(input2)
+
+#Create Excel Filename
+x = datetime.datetime.now()
+timestamp = x.strftime("%Y-%m-%d.%H%M")
+Excelpath = Outputpath + "\FixityLog" + timestamp + ".xlsx"
+
+#Import Batch File
+Batch = ET.parse(XMLpath)
+
+#Establish MediaAssets as root element
+MediaAssets = Batch.getroot()
+
+#First MediaAsset in MediaAssets
+#MediaAssetType = MediaAssets[0]
+
+#Code for looking through elements
+#for x in MediaAssetType:
+#    print(x.tag, x.text)
+
+#First Element in Media Asset
+#OriginalType = MediaAssetType[0]
+
+#First Element in Original Type
+#AssetIdentifier = OriginalType[0]
+
+#How to find specific element
+#for x in MediaAssetType.findall('Original'):
+#    AssetIdentifierType = x.find('AssetIdentifier').text
+#    print (AssetIdentifierType)
+
+#Create a workbook and worksheet
+workbook = xlsxwriter.Workbook(Excelpath)
+worksheet = workbook.add_worksheet()
+
+#create headers
+worksheet.write(0,0,'file')
+worksheet.write(0,1,'title')
+worksheet.write(0,2,'author')
+worksheet.write(0,3,'approved_uses')
+worksheet.write(0,4,'Archives_series')
+worksheet.write(0,5,'archives_code')
+worksheet.write(0,6,'Archives_collection_ID')
+worksheet.write(0,7,'Archives_collection_name')
+worksheet.write(0,8,'citation')
+worksheet.write(0,9,'color_bw')
+worksheet.write(0,10,'copyright_status')
+worksheet.write(0,11,'copyright_holder')
+worksheet.write(0,12,'copyright_statement')
+worksheet.write(0,13,'copyright_notes')
+worksheet.write(0,14,'created_by')
+worksheet.write(0,15,'created_dept')
+worksheet.write(0,16,'credit_line')
+worksheet.write(0,17,'date_display')
+worksheet.write(0,18,'file_source')
+worksheet.write(0,19,'exhibition_ID')
+worksheet.write(0,20,'staff_notes')
+worksheet.write(0,21,'descriptive_notes')
+worksheet.write(0,22,'publication_date')
+worksheet.write(0,23,'keyword_tags')
+worksheet.write(0,24,'image_description')
+worksheet.write(0,25,'broadcast_standard')
+worksheet.write(0,26,'frame_size')
+worksheet.write(0,27,'sound_type')
+worksheet.write(0,28,'color_space')
+worksheet.write(0,29,'bitrate')
+worksheet.write(0,30,'aspect_ratio')
+worksheet.write(0,31,'running_time')
+worksheet.write(0,32,'time_start')
+worksheet.write(0,33,'language')
+worksheet.write(0,34,'subtitles')
+worksheet.write(0,35,'subject')
+worksheet.write(0,36,'subject_controlled_vocab')
+worksheet.write(0,37,'preservation_notes')
+worksheet.write(0,38,'created_production')
+worksheet.write(0,39,'image_bit_depth')
+worksheet.write(0,40,'audio_bit_depth')
+worksheet.write(0,41,'Tape_Length')
+worksheet.write(0,42,'Generation')
+worksheet.write(0,43,'VNUM')
+
+#Header Element Key
+#file = DescriptiveMetadata/FileName/ = 0
+#title = DescriptiveMetadata/Title/ = 1
+#archives_series = DescriptiveMetadata/Series/ = 4
+#archives_code = DescriptiveMetadata/FileName/ = 5
+#archives_collection_ID = DescriptiveMetadata/FileName/ = 6
+#color_bw = Original/ColorAttributes/ = 9
+#date_display = DescriptiveMetadata/Date = 17
+#file_source = Original/FormatType = 18
+#broadcast_standard = Original/VideoStandard = 25
+#frame_size = PreservationMaster/FrameSizeHorizontal+FrameSizeVertical = 26
+#sound_type = Access/AudioCodec = 27
+#color_space = Access/ColorSampling = 28
+#bitrate = Access/DataRate = 29
+#aspect_ratio = Access/AspectRatio = 30
+#running_time = Access/RunningTime = 31
+#subtitles = Original/ClosedCaptions = 34
+#preservation_notes = Original/TransferComments = 37
+#image_bit_depth = Access/VideoBitDepth = 39
+#audio_bit_depth = Access/AudioBitRate = 40
+#tape_length = DescriptiveMetadata/Tapelength = 41
+#Generation = DescriptiveMetadata/Generation = 42
+
+#(row, col)
+row=1
+col=0
+
+#loop, which asset you're iterating through
+i=0
+
+while i<(len(MediaAssets)): #number of MediaAssets in file
+    for x in MediaAssets[i].findall('Original'):
+        if x.find('ColorAttributes') is not None:
+            worksheet.write(row,9,x.find('ColorAttributes').text)
+        else:
+            worksheet.write(row, 9, "")
+        if x.find('FormatType') is not None:
+            worksheet.write(row,18,x.find('FormatType').text)
+        else:
+            worksheet.write(row, 18, "")
+        if x.find('VideoStandard') is not None:
+            worksheet.write(row,25,x.find('VideoStandard').text)
+        else:
+            worksheet.write(row, 25, "")
+        if x.find('ClosedCaptions') is not None:
+            worksheet.write(row,34,x.find('ClosedCaptions').text)
+        else:
+            worksheet.write(row, 34, "")
+        if x.find('TransferComments') is not None:
+            TransferCommentsType = x.find('TransferComments').text
+            TransferCommentsTypeRedux = " ".join(TransferCommentsType.split())
+            worksheet.write(row,37, TransferCommentsTypeRedux)
+        else:
+            worksheet.write(row, 37, "")
+
+    for x in MediaAssets [i].findall('DescriptiveMetadata'):
+        if x.find('FileName') is not None:
+            FileNameType = x.find('FileName').text
+            worksheet.write(row, 0, FileNameType)
+            CodeType = FileNameType.split('_')[0]
+            worksheet.write(row,5, CodeType)
+            worksheet.write(row,6, CodeType)
+        else:
+            worksheet.write(row, 0, "")
+            worksheet.write(row,5, "")
+            worksheet.write(row,6, "")
+        if x.find('Title') is not None:
+            TitleType = x.find('Title').text
+            TitleTypeRedux = " ".join(TitleType.split())
+            worksheet.write(row, 1, TitleTypeRedux)
+        else:
+            worksheet.write(row, 1, "")
+        if x.find('Series') is not None:
+            worksheet.write(row,4,x.find('Series').text)
+        else:
+            worksheet.write(row, 4, "")
+
+        if x.find('Date') is not None:
+            if x.find('Date').text != "n.d.":
+                DateType = x.find('Date').text
+                DateFields = len(DateType.split('.'))
+
+                if DateFields ==1:
+                    worksheet.write(row,17,DateType)
+                else:
+                    if DateFields == 2:
+                        worksheet.write(row, 17, (DateType.split('.')[1] + "/" + DateType.split('.')[0]))
+                    else:
+                        worksheet.write(row, 17, (DateType.split('.')[1] + "/" + DateType.split('.')[2] + "/" + DateType.split('.')[0]))
+            else:
+                worksheet.write(row, 17, "Undated")
+        else:
+            worksheet.write(row, 17, "")
+
+        if x.find('Tapelength') is not None:
+            worksheet.write(row,41,x.find('Tapelength').text)
+        else:
+            worksheet.write(row, 42, "")
+        if x.find('Generation') is not None:
+            GenerationType = x.find('Generation').text
+            GenerationTypeClean = GenerationType.capitalize()
+            worksheet.write(row,42,GenerationTypeClean)
+        else:
+            worksheet.write(row, 42, "")
+
+    for x in MediaAssets [i].findall('Access'):
+        if x.find('AudioCodec') is not None:
+            worksheet.write(row, 27, x.find('AudioCodec').text)
+        else:
+            worksheet.write(row, 27, "")
+        if x.find('ColorSampling') is not None:
+            worksheet.write(row, 28, x.find('ColorSampling').text)
+        else:
+            worksheet.write(row, 28, "")
+        if x.find('DataRate') is not None:
+            worksheet.write(row, 29, x.find('DataRate').text)
+        else:
+            worksheet.write(row, 29, "")
+        if x.find('AspectRatio') is not None:
+            worksheet.write(row, 30, x.find('AspectRatio').text)
+        else:
+            worksheet.write(row, 30, "")
+        if x.find('RunningTime') is not None:
+            worksheet.write(row, 31, x.find('RunningTime').text)
+        else:
+            worksheet.write(row, 31, "")
+        if x.find('VideoBitDepth') is not None:
+            worksheet.write(row, 39, x.find('VideoBitDepth').text)
+        else:
+            worksheet.write(row, 39, "")
+        if x.find('AudioBitRate') is not None:
+            worksheet.write(row, 40, x.find('AudioBitRate').text)
+        else:
+            worksheet.write(row, 40, "")
+
+    for x in MediaAssets [i].findall('PreservationMaster'):
+
+        if x.find('FrameSizeHorizontal') is not None:
+            FrameSizeHorizontalType = x.find('FrameSizeHorizontal').text
+        else:
+            FrameSizeHorizontalType = ""
+        if x.find('FrameSizeVertical') is not None:
+            FrameSizeVerticalType = x.find('FrameSizeVertical').text
+        else:
+            FrameSizeVerticalType = ""
+        FrameSizeType = FrameSizeHorizontalType + "x" + FrameSizeVerticalType
+        worksheet.write(row, 26, FrameSizeType)
+
+    i=i+1
+    row=row+1
+    col=0
+
+#closeworkbook
+workbook.close()
+
+#print done if success
+print()
+print("*Netx metadata extraction complete for " + XMLpath + "*")
+print("*Excel sheet saved as " + Excelpath + "*")
