@@ -1,0 +1,278 @@
+import hashlib
+import pathlib
+import os
+import xlsxwriter
+import datetime
+
+# Ask user which directory to search
+input1 = input('Enter input path: ')
+while os.path.isdir(input1) == False:
+    input1 = input('Directory path not valid, please re-enter: ')
+Dirpath = str(input1)
+
+# Ask user which directory to output information
+input2 = input('Enter XLSX output path: ')
+while os.path.isdir(input2) == False:
+    input2 = input('Directory path not valid, please re-enter: ')
+Outputpath = str(input2)
+
+#Create Excel Filename
+x = datetime.datetime.now()
+timestamp = x.strftime("%Y-%m-%d.%H%M")
+XLSXpath = Outputpath + "\FixityLog" + timestamp + ".xlsx"
+
+# Create a workbook and worksheet
+workbook = xlsxwriter.Workbook(XLSXpath)
+worksheet = workbook.add_worksheet()
+
+# headers for worksheet
+worksheet.write(0, 0, 'Movie File')
+worksheet.write(0, 1, 'MD5 File')
+worksheet.write(0, 2, 'Old Hash')
+worksheet.write(0, 3, 'New Hash')
+worksheet.write(0, 4, 'Fixity Check')
+worksheet.write(0, 5, 'Notes')
+
+row = 1
+col = 0
+
+# Compile all .md5 files to analyze
+md5s = pathlib.Path(Dirpath).glob("**/*.md5")
+md5s_list = sorted(md5s)
+
+# Compile all .mov and .mp4 files to analyze
+mp4files = pathlib.Path(Dirpath).glob("**/*.mp4")
+movfiles = pathlib.Path(Dirpath).glob("**/*.mov")
+moviefiles = [*mp4files, *movfiles]
+moviefiles_list = sorted(moviefiles)
+
+#List for MD5s which don't have corresponding files
+unmatched_MD5s = [[], []]
+
+#List for Movie files which don't have corresponding MD5s
+unmatched_MOVs = [[], []]
+
+# Perform Fixity Check with list of md5s as reference
+for i in md5s_list:
+    x = str(i)
+    md5file = open(x)
+    content = md5file.read()
+    oldhash = content.split(' ')[0]
+
+    moviefile = x.split('.md5')[0]
+    if moviefile in moviefiles_list:
+
+        size = os.path.getsize(moviefile)
+        iterations = size//8192
+        quarter = iterations//4
+        n = 0
+
+        with open(moviefile, "rb") as f:
+            file_hash = hashlib.md5()
+            print ('Generating new hash for ' + moviefile.split('\\')[-1])
+            print (str(size) + ' bytes')
+            while chunk := f.read(8192):
+                file_hash.update(chunk)
+                n = n + 1
+
+                if n == quarter:
+                    print('... ... 25% Done')
+
+                if n == quarter * 2:
+                    print('... ... 50% Done')
+
+                if n == quarter * 3:
+                    print('... ... 75% Done')
+        print('... ... Complete')
+
+        newhash = file_hash.hexdigest()
+
+        worksheet.write(row, 0, moviefile)
+        worksheet.write(row, 1, x)
+        worksheet.write(row, 2, oldhash)
+        worksheet.write(row, 3, newhash)
+
+        if (newhash.lower() == oldhash.lower()):
+            worksheet.write(row, 4, 'PASSED')
+            row = row + 1
+        else:
+            worksheet.write(row, 4, 'FAILED')
+            row = row + 1
+
+    else:
+        unmatched_MD5s[0].append(x)
+        unmatched_MD5s[1].append(oldhash)
+
+
+#Search for unmatched movie files
+i = len(moviefiles_list)
+j = len(md5s_list)
+
+x = 0
+y = 0
+
+if j == 0:
+    for m in moviefiles_list:
+        filestring1 = str(m)
+        size = os.path.getsize(filestring1)
+        iterations = size // 8192
+        quarter = iterations // 4
+        n = 0
+
+        with open(filestring1, "rb") as f:
+            file_hash = hashlib.md5()
+            print('Generating new hash for ' + filestring1.split('\\')[-1])
+            print(str(size) + ' bytes')
+            while chunk := f.read(8192):
+                file_hash.update(chunk)
+                n = n + 1
+
+                if n == quarter:
+                    print('... ... 25% Done')
+
+                if n == quarter * 2:
+                    print('... ... 50% Done')
+
+                if n == quarter * 3:
+                    print('... ... 75% Done')
+
+        print('... ... Complete')
+        newhash = file_hash.hexdigest()
+
+        unmatched_MOVs[0].append(filestring1)
+        unmatched_MOVs[1].append(newhash)
+else:
+    while x < i:
+        while y < j:
+            filestring1 = str(moviefiles_list[x])
+            filestring2 = str(md5s_list[y])
+            filestring3 = filestring2.split(".md5")[0]
+
+            if filestring1 == filestring3:
+                break
+            else:
+                if (y + 1 == j):
+                    size = os.path.getsize(filestring1)
+                    iterations = size // 8192
+                    quarter = iterations // 4
+                    n=0
+
+                    with open(filestring1, "rb") as f:
+                        file_hash = hashlib.md5()
+                        print('Generating new hash for ' + filestring1.split('\\')[-1])
+                        print(str(size) + ' bytes')
+                        while chunk := f.read(8192):
+                            file_hash.update(chunk)
+                            n = n + 1
+
+                            if n == quarter:
+                                print('... ... 25% Done')
+
+                            if n == quarter * 2:
+                                print('... ... 50% Done')
+
+                            if n == quarter * 3:
+                                print('... ... 75% Done')
+
+                    print('... ... Complete')
+                    newhash = file_hash.hexdigest()
+
+                    unmatched_MOVs[0].append(filestring1)
+                    unmatched_MOVs[1].append(newhash)
+                    break
+                else:
+                    y = y + 1
+
+        x = x +1
+        y = 0
+
+
+
+#enumerate through unmatched lists and look for hash matches
+x = len(unmatched_MOVs[0])
+y = len(unmatched_MD5s[0])
+i = 0
+j = 0
+
+
+while (i < x):
+    while j < y:
+        hashentry = unmatched_MOVs[1][i]
+        hashentry2 = unmatched_MD5s[1][j]
+
+        if hashentry.lower() == hashentry2.lower():
+
+          index1 = unmatched_MOVs[1].index(hashentry)
+          file1 = unmatched_MOVs[0][index1]
+
+          index2 = unmatched_MD5s[1].index(hashentry2)
+          file2 = unmatched_MD5s[0][index2]
+
+          worksheet.write(row, 0, unmatched_MOVs[0][i])
+          worksheet.write(row, 1, unmatched_MD5s[0][j])
+          worksheet.write(row, 2, hashentry2)
+          worksheet.write(row, 3, hashentry)
+          worksheet.write(row, 4, "PASSED")
+
+          comparefile1 = unmatched_MOVs[0][i].split("\\")[-1]
+          compare2 = unmatched_MD5s[0][j].split("\\")[-1]
+          comparefile2 = compare2.split(".md5")[0]
+
+          compareaddress1 = unmatched_MOVs[0][i].split(comparefile1)[0]
+          compareaddress2 = unmatched_MD5s[0][j].split(compare2)[0]
+
+          if comparefile1 == comparefile2:
+              worksheet.write(row, 5, "File(s) may have been moved. Please check paths.")
+          else:
+              if compareaddress1 == compareaddress2:
+                  worksheet.write(row, 5, "File(s) may have been renamed. Please check paths.")
+              else:
+                  worksheet.write(row, 5, "File(s) may have been moved and renamed. Please check paths.")
+          row = row+1
+
+          del unmatched_MOVs[0][index1]
+          del unmatched_MOVs[1][index1]
+
+          del unmatched_MD5s[0][index2]
+          del unmatched_MD5s[1][index2]
+
+          x = len(unmatched_MOVs[0])
+          y = len(unmatched_MD5s[0])
+          j = 0
+
+          break
+
+        else:
+            j = j+1
+    i = i + 1
+    j = 0
+
+#after matches confirmed and removed, enumerate through unmatched lists a second time
+x = len(unmatched_MOVs[0])
+y = len(unmatched_MD5s[0])
+i = 0
+j = 0
+
+while i < x:
+    worksheet.write(row, 0, unmatched_MOVs[0][i])
+    worksheet.write(row, 2, "MD5 file not found")
+    worksheet.write(row, 3, unmatched_MOVs[1][i])
+    worksheet.write(row, 4, "FAILED")
+    i = i+1
+    row = row + 1
+
+while j < y:
+    worksheet.write(row, 1, unmatched_MD5s[0][j])
+    worksheet.write(row, 2, unmatched_MD5s[1][j])
+    worksheet.write(row, 3, "Movie file not found")
+    worksheet.write(row, 4, "FAILED")
+    j = j+1
+    row = row + 1
+
+# closeworkbook
+workbook.close()
+
+# print done once program is finished
+print()
+print("*Fixity check complete for " + Dirpath + "*")
+print("*Log saved as " + XLSXpath + "*")
